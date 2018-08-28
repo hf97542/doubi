@@ -5,12 +5,12 @@ export PATH
 #=================================================
 #	System Required: CentOS/Debian/Ubuntu
 #	Description: Lightsocks
-#	Version: 1.0.0
+#	Version: 1.0.1
 #	Author: Toyo
 #	Blog: https://doub.io/lightsocks-jc1/
 #=================================================
 
-sh_ver="1.0.0"
+sh_ver="1.0.1"
 filepath=$(cd "$(dirname "$0")"; pwd)
 file_1=$(echo -e "${filepath}"|awk -F "$0" '{print $1}')
 file="/usr/local/lightsocks"
@@ -24,6 +24,9 @@ Info="${Green_font_prefix}[信息]${Font_color_suffix}"
 Error="${Red_font_prefix}[错误]${Font_color_suffix}"
 Tip="${Green_font_prefix}[注意]${Font_color_suffix}"
 
+check_root(){
+	[[ $EUID != 0 ]] && echo -e "${Error} 当前非ROOT账号(或没有ROOT权限)，无法继续操作，请更换ROOT账号或使用 ${Green_background_prefix}sudo su${Font_color_suffix} 命令获取临时ROOT权限（执行后可能会提示输入当前账号的密码）。" && exit 1
+}
 #检查系统
 check_sys(){
 	if [[ -f /etc/redhat-release ]]; then
@@ -232,6 +235,7 @@ Modify_config_password(){
 	fi
 }
 Install_lightsocks(){
+	check_root
 	[[ -e ${lightsocks_file} ]] && echo -e "${Error} 检测到 Lightsocks 已安装 !" && exit 1
 	echo -e "${Info} 开始设置 用户配置..."
 	Set_port
@@ -534,7 +538,7 @@ Set_iptables(){
 }
 Update_Shell(){
 	echo -e "当前版本为 [ ${sh_ver} ]，开始检测最新版本..."
-	sh_new_ver=$(wget --no-check-certificate -qO- "https://softs.fun/Bash/lightsocks.sh"|grep 'sh_ver="'|awk -F "=" '{print $NF}'|sed 's/\"//g'|head -1) && sh_new_type="softs"
+	sh_new_ver=$(wget --no-check-certificate -qO- "https://softs.loan/Bash/lightsocks.sh"|grep 'sh_ver="'|awk -F "=" '{print $NF}'|sed 's/\"//g'|head -1) && sh_new_type="softs"
 	[[ -z ${sh_new_ver} ]] && sh_new_ver=$(wget --no-check-certificate -qO- "https://raw.githubusercontent.com/ToyoDAdoubi/doubi/master/lightsocks.sh"|grep 'sh_ver="'|awk -F "=" '{print $NF}'|sed 's/\"//g'|head -1) && sh_new_type="github"
 	[[ -z ${sh_new_ver} ]] && echo -e "${Error} 检测最新版本失败 !" && exit 0
 	if [[ ${sh_new_ver} != ${sh_ver} ]]; then
@@ -542,8 +546,12 @@ Update_Shell(){
 		stty erase '^H' && read -p "(默认: y):" yn
 		[[ -z "${yn}" ]] && yn="y"
 		if [[ ${yn} == [Yy] ]]; then
+			if [[ -e "/etc/init.d/lightsocks" ]]; then
+				rm -rf /etc/init.d/lightsocks
+				Service_lightsocks
+			fi
 			if [[ ${sh_new_type} == "softs" ]]; then
-				wget -N --no-check-certificate https://softs.fun/Bash/lightsocks.sh && chmod +x lightsocks.sh
+				wget -N --no-check-certificate https://softs.loan/Bash/lightsocks.sh && chmod +x lightsocks.sh
 			else
 				wget -N --no-check-certificate https://raw.githubusercontent.com/ToyoDAdoubi/doubi/master/lightsocks.sh && chmod +x lightsocks.sh
 			fi

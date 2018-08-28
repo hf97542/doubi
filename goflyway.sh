@@ -5,12 +5,12 @@ export PATH
 #=================================================
 #	System Required: CentOS/Debian/Ubuntu
 #	Description: GoFlyway
-#	Version: 1.0.7
+#	Version: 1.0.8
 #	Author: Toyo
 #	Blog: https://doub.io/goflyway-jc2/
 #=================================================
 
-sh_ver="1.0.7"
+sh_ver="1.0.8"
 filepath=$(cd "$(dirname "$0")"; pwd)
 file_1=$(echo -e "${filepath}"|awk -F "$0" '{print $1}')
 Folder="/usr/local/goflyway"
@@ -25,6 +25,9 @@ Info="${Green_font_prefix}[信息]${Font_color_suffix}"
 Error="${Red_font_prefix}[错误]${Font_color_suffix}"
 Tip="${Green_font_prefix}[注意]${Font_color_suffix}"
 
+check_root(){
+	[[ $EUID != 0 ]] && echo -e "${Error} 当前非ROOT账号(或没有ROOT权限)，无法继续操作，请更换ROOT账号或使用 ${Green_background_prefix}sudo su${Font_color_suffix} 命令获取临时ROOT权限（执行后可能会提示输入当前账号的密码）。" && exit 1
+}
 #检查系统
 check_sys(){
 	if [[ -f /etc/redhat-release ]]; then
@@ -253,6 +256,7 @@ Set_goflyway(){
 	fi
 }
 Install_goflyway(){
+	check_root
 	[[ -e ${File} ]] && echo -e "${Error} 检测到 GoFlyway 已安装 !" && exit 1
 	echo -e "${Info} 开始设置 用户配置..."
 	Set_conf
@@ -463,7 +467,7 @@ Set_crontab_monitor_goflyway(){
 	crontab_monitor_goflyway_status=$(crontab -l|grep "goflyway.sh monitor")
 	if [[ -z "${crontab_monitor_goflyway_status}" ]]; then
 		echo && echo -e "当前监控模式: ${Green_font_prefix}未开启${Font_color_suffix}" && echo
-		echo -e "确定要开启 ${Green_font_prefix}Goflyway 服务端运行状态监控${Font_color_suffix} 功能吗？(当进程关闭则自动启动SSR服务端)[Y/n]"
+		echo -e "确定要开启 ${Green_font_prefix}Goflyway 服务端运行状态监控${Font_color_suffix} 功能吗？(当进程关闭则自动启动 Goflyway 服务端)[Y/n]"
 		stty erase '^H' && read -p "(默认: y):" crontab_monitor_goflyway_status_ny
 		[[ -z "${crontab_monitor_goflyway_status_ny}" ]] && crontab_monitor_goflyway_status_ny="y"
 		if [[ ${crontab_monitor_goflyway_status_ny} == [Yy] ]]; then
@@ -473,7 +477,7 @@ Set_crontab_monitor_goflyway(){
 		fi
 	else
 		echo && echo -e "当前监控模式: ${Green_font_prefix}已开启${Font_color_suffix}" && echo
-		echo -e "确定要关闭 ${Green_font_prefix}Goflyway 服务端运行状态监控${Font_color_suffix} 功能吗？(当进程关闭则自动启动SSR服务端)[y/N]"
+		echo -e "确定要关闭 ${Green_font_prefix}Goflyway 服务端运行状态监控${Font_color_suffix} 功能吗？(当进程关闭则自动启动 Goflyway 服务端)[y/N]"
 		stty erase '^H' && read -p "(默认: n):" crontab_monitor_goflyway_status_ny
 		[[ -z "${crontab_monitor_goflyway_status_ny}" ]] && crontab_monitor_goflyway_status_ny="n"
 		if [[ ${crontab_monitor_goflyway_status_ny} == [Yy] ]]; then
@@ -553,7 +557,7 @@ Set_iptables(){
 }
 Update_Shell(){
 	echo -e "当前版本为 [ ${sh_ver} ]，开始检测最新版本..."
-	sh_new_ver=$(wget --no-check-certificate -qO- "https://softs.fun/Bash/goflyway.sh"|grep 'sh_ver="'|awk -F "=" '{print $NF}'|sed 's/\"//g'|head -1) && sh_new_type="softs"
+	sh_new_ver=$(wget --no-check-certificate -qO- "https://softs.loan/Bash/goflyway.sh"|grep 'sh_ver="'|awk -F "=" '{print $NF}'|sed 's/\"//g'|head -1) && sh_new_type="softs"
 	[[ -z ${sh_new_ver} ]] && sh_new_ver=$(wget --no-check-certificate -qO- "https://raw.githubusercontent.com/ToyoDAdoubi/doubi/master/goflyway.sh"|grep 'sh_ver="'|awk -F "=" '{print $NF}'|sed 's/\"//g'|head -1) && sh_new_type="github"
 	[[ -z ${sh_new_ver} ]] && echo -e "${Error} 检测最新版本失败 !" && exit 0
 	if [[ ${sh_new_ver} != ${sh_ver} ]]; then
@@ -561,8 +565,12 @@ Update_Shell(){
 		stty erase '^H' && read -p "(默认: y):" yn
 		[[ -z "${yn}" ]] && yn="y"
 		if [[ ${yn} == [Yy] ]]; then
+			if [[ -e "/etc/init.d/goflyway" ]]; then
+				rm -rf /etc/init.d/goflyway
+				Service_goflyway
+			fi
 			if [[ $sh_new_type == "softs" ]]; then
-				wget -N --no-check-certificate https://softs.fun/Bash/goflyway.sh && chmod +x goflyway.sh
+				wget -N --no-check-certificate https://softs.loan/Bash/goflyway.sh && chmod +x goflyway.sh
 			else
 				wget -N --no-check-certificate https://raw.githubusercontent.com/ToyoDAdoubi/doubi/master/goflyway.sh && chmod +x goflyway.sh
 			fi
